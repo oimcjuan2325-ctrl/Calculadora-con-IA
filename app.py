@@ -11,7 +11,6 @@ st.set_page_config(
     layout="wide",
 )
 
-# Estilos CSS generales + Estilo flotante moderno para la IA en la esquina inferior derecha
 st.markdown(
     """
     <style>
@@ -70,7 +69,6 @@ modo = st.sidebar.selectbox(
     ],
 )
 
-# Inicializar variables de estado para que la IA lea la pantalla actual
 if "sci_val" not in st.session_state:
     st.session_state.sci_val = ""
 if "last_result" not in st.session_state:
@@ -284,11 +282,9 @@ with st.container():
     st.markdown('<div class="floating-ai-container">', unsafe_allow_html=True)
     st.markdown("🤖 **Asistente Matemático IA**")
 
-    # Historial de chat interno para la IA flotante
     if "ai_messages" not in st.session_state:
         st.session_state.ai_messages = []
 
-    # Mostrar mensajes previos breves
     for msg in st.session_state.ai_messages[-2:]:
         if msg["role"] == "user":
             st.markdown(f"**Tú:** {msg['content']}")
@@ -304,7 +300,6 @@ with st.container():
     if st.button("Preguntar a la IA"):
         if user_query.strip():
             try:
-                # Inicializar el cliente de GenAI usando secrets de Streamlit
                 api_key = st.secrets.get("GEMINI_API_KEY", "")
                 if not api_key:
                     st.error(
@@ -313,7 +308,6 @@ with st.container():
                 else:
                     client = genai.Client(api_key=api_key)
 
-                    # Contexto actual de la pantalla que la IA lee automáticamente
                     contexto_pantalla = st.session_state.get(
                         "last_result", "Sin datos en pantalla"
                     )
@@ -325,8 +319,9 @@ with st.container():
                         f"Pregunta del usuario: {user_query}"
                     )
 
+                    # MODELO ACTUALIZADO
                     response = client.models.generate_content(
-                        model="gemini-2.5-flash", contents=prompt_sistema
+                        model="gemini-3.6-flash", contents=prompt_sistema
                     )
                     respuesta_ia = response.text
 
