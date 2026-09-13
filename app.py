@@ -1,7 +1,7 @@
 import mpmath
 import numpy as np
-import plotly.graph_objects as go
 import streamlit as st
+from google import genai
 
 mpmath.mp.dps = 30
 
@@ -11,6 +11,7 @@ st.set_page_config(
     layout="wide",
 )
 
+# Estilos CSS generales + Estilo flotante moderno para la IA en la esquina inferior derecha
 st.markdown(
     """
     <style>
@@ -35,6 +36,20 @@ st.markdown(
         color: #00ffcc;
         border-color: #00ffcc;
     }
+    
+    /* Contenedor flotante para la IA en la esquina inferior derecha */
+    .floating-ai-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 999999;
+        background: #161b22;
+        border: 2px solid #00ffcc;
+        border-radius: 12px;
+        padding: 10px;
+        box-shadow: 0 4px 20px rgba(0,255,204,0.3);
+        max-width: 350px;
+    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -42,7 +57,7 @@ st.markdown(
 
 st.title("🧮 Consola Científica de Precisión & Motor Simbólico")
 st.markdown(
-    "Sistema de cálculo avanzado con teclados virtuales unificados y GeoGebra integrado."
+    "Sistema de cálculo avanzado con teclados virtuales, GeoGebra y Asistente IA integrado."
 )
 st.markdown("---")
 
@@ -55,6 +70,12 @@ modo = st.sidebar.selectbox(
     ],
 )
 
+# Inicializar variables de estado para que la IA lea la pantalla actual
+if "sci_val" not in st.session_state:
+    st.session_state.sci_val = ""
+if "last_result" not in st.session_state:
+    st.session_state.last_result = "Ningún cálculo realizado todavía."
+
 if modo == "Calculadora Científica Interactiva":
     st.subheader(
         "🔢 Calculadora Científica Interactiva & Alta Precisión (30+ decimales)"
@@ -62,9 +83,6 @@ if modo == "Calculadora Científica Interactiva":
     st.markdown(
         "Utiliza el teclado virtual unificado para realizar operaciones científicas completas y evaluaciones extremas."
     )
-
-    if "sci_val" not in st.session_state:
-        st.session_state.sci_val = ""
 
 
     def add_sci(val):
@@ -88,6 +106,7 @@ if modo == "Calculadora Científica Interactiva":
         add_sci(")")
     if b7.button("🗑️ Clear"):
         st.session_state.sci_val = ""
+        st.session_state.last_result = "Limpiado."
 
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     if c1.button("7"):
@@ -177,9 +196,7 @@ if modo == "Calculadora Científica Interactiva":
         "Expresión Científica de Alta Precisión:", key="sci_val"
     )
 
-    if st.button(
-        "🚀 Calcular Resultado con 30+ Decimales", type="primary"
-    ):
+    if st.button("🚀 Calcular Resultado con 30+ Decimales", type="primary"):
         if not sci_input.strip():
             st.warning("Por favor, introduce alguna expresión para calcular.")
         else:
@@ -211,15 +228,24 @@ if modo == "Calculadora Científica Interactiva":
                 }
                 resultado_eval = eval(sci_input, safe_dict, {})
                 res_sci = mpmath.nstr(resultado_eval, 30)
+                st.session_state.last_result = (
+                    f"Expresión: {sci_input} | Resultado: {res_sci}"
+                )
                 st.success("¡Resultado calculado con éxito (30 decimales)!")
                 st.code(res_sci, language="text")
             except Exception as e:
+                st.session_state.last_result = (
+                    f"Expresión: {sci_input} | Error: {e}"
+                )
                 st.error(f"Error en el cálculo: {e}")
 
 elif modo == "Geometría Avanzada (GeoGebra)":
     st.subheader("📐 Entorno de Geometría Avanzada (GeoGebra en Pantalla Completa)")
     st.markdown(
         "Utiliza la herramienta interactiva de GeoGebra expandida al máximo para ocupar toda la pantalla."
+    )
+    st.session_state.last_result = (
+        "El usuario se encuentra interactuando con GeoGebra (Geometría Analítica/Gráfica)."
     )
 
     geogebra_html = """
@@ -240,10 +266,83 @@ else:
             )
             B = np.array([float(n) for n in vector_txt.split(",")])
             sol = np.linalg.solve(A, B)
+            st.session_state.last_result = (
+                f"Matriz A:\n{matriz_txt}\nVector B: {vector_txt}\nSolución: {sol}"
+            )
             st.success("Solución del sistema:")
             st.write(sol)
         except Exception as e:
+            st.session_state.last_result = (
+                f"Error en sistema lineal con Matriz A: {matriz_txt} -> {e}"
+            )
             st.error(f"Error: {e}")
 
+# ==========================================
+# ASISTENTE DE IA FLOTANTE (Esquina Inferior Derecha)
+# ==========================================
+with st.container():
+    st.markdown('<div class="floating-ai-container">', unsafe_allow_html=True)
+    st.markdown("🤖 **Asistente Matemático IA**")
+
+    # Historial de chat interno para la IA flotante
+    if "ai_messages" not in st.session_state:
+        st.session_state.ai_messages = []
+
+    # Mostrar mensajes previos breves
+    for msg in st.session_state.ai_messages[-2:]:
+        if msg["role"] == "user":
+            st.markdown(f"**Tú:** {msg['content']}")
+        else:
+            st.markdown(f"**IA:** {msg['content']}")
+
+    user_query = st.text_input(
+        "Pregúntale a la IA sobre tu pantalla:",
+        key="ai_quick_query",
+        placeholder="¿Qué significa esto o hay error?",
+    )
+
+    if st.button("Preguntar a la IA"):
+        if user_query.strip():
+            try:
+                # Inicializar el cliente de GenAI usando secrets de Streamlit
+                api_key = st.secrets.get("GEMINI_API_KEY", "")
+                if not api_key:
+                    st.error(
+                        "Falta configurar GEMINI_API_KEY en st.secrets de Streamlit."
+                    )
+                else:
+                    client = genai.Client(api_key=api_key)
+
+                    # Contexto actual de la pantalla que la IA lee automáticamente
+                    contexto_pantalla = st.session_state.get(
+                        "last_result", "Sin datos en pantalla"
+                    )
+                    prompt_sistema = (
+                        "Eres un profesor experto en matemáticas y análisis numérico. "
+                        "Analiza el contexto actual de la pantalla del usuario y responde de forma concisa y directa "
+                        "a su duda sobre si hay errores, conceptos o el significado matemático de lo que está viendo.\n\n"
+                        f"Contexto de la pantalla actual: {contexto_pantalla}\n"
+                        f"Pregunta del usuario: {user_query}"
+                    )
+
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash", contents=prompt_sistema
+                    )
+                    respuesta_ia = response.text
+
+                    st.session_state.ai_messages.append(
+                        {"role": "user", "content": user_query}
+                    )
+                    st.session_state.ai_messages.append(
+                        {"role": "assistant", "content": respuesta_ia}
+                    )
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Error al conectar con la IA: {e}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
 st.markdown("---")
-st.caption("Consola científica avanzada impulsada por Python y Streamlit.")
+st.caption(
+    "Consola científica avanzada impulsada por Python, Streamlit y Google Gemini."
+)
