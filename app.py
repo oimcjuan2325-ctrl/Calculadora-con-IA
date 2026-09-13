@@ -2,6 +2,7 @@ import mpmath
 import numpy as np
 import streamlit as st
 import sympy as sp
+import plotly.graph_objects as go
 from google import genai
 
 mpmath.mp.dps = 30
@@ -41,43 +42,33 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Inicializar estados globales de la aplicación
 if "lang" not in st.session_state:
     st.session_state.lang = "Español"
 if "sci_val" not in st.session_state:
     st.session_state.sci_val = ""
 if "last_result" not in st.session_state:
     st.session_state.last_result = "Ningún cálculo realizado todavía."
+if "ai_messages" not in st.session_state:
+    st.session_state.ai_messages = []
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-# Sistema de gestión de múltiples chats en la IA
-if "conversations" not in st.session_state:
-    st.session_state.conversations = {
-        "Chat Principal": []
-    }
-if "current_chat" not in st.session_state:
-    st.session_state.current_chat = "Chat Principal"
-
-# Diccionario de traducciones para la interfaz
 t = {
     "Español": {
         "title": "🧮 Consola Científica de Precisión & Motor Simbólico",
-        "subtitle": "Sistema de cálculo avanzado con símbolos LaTeX, GeoGebra y Asistente IA multilingüe.",
+        "subtitle": "Sistema avanzado con gráficos 2D, conversor de unidades, historial, LaTeX, GeoGebra e IA.",
         "settings_header": "⚙️ Ajustes de la App",
         "lang_label": "Idioma / Hizkuntza",
         "save_btn": "Guardar ajustes",
         "mode_label": "Modo de Operación:",
         "modes": [
             "Calculadora Científica Interactiva",
+            "Graficador 2D de Funciones",
+            "Conversor de Unidades Científicas",
             "Geometría Avanzada (GeoGebra)",
-            "Resolución de Sistemas Lineales",
         ],
         "ai_header": "🤖 Asistente Matemático IA",
-        "ai_desc": "Gestiona tus conversaciones y pregunta sobre lo que hay en pantalla:",
-        "new_chat_name": "Nombre del nuevo chat:",
-        "create_chat_btn": "➕ Crear Nuevo Chat",
-        "select_chat": "Conversación activa:",
-        "rename_chat_input": "Renombrar chat actual:",
-        "rename_btn": "✏️ Cambiar Nombre",
+        "ai_desc": "Pregúntale sobre lo que hay en pantalla (se borra al salir):",
         "ai_placeholder": "Ej: ¿Por qué da error esto?",
         "ai_btn": "Preguntar a la IA",
         "calc_sub": "🔢 Calculadora Científica Interactiva & Símbolos Matemáticos",
@@ -91,34 +82,35 @@ t = {
         "warning_empty": "Por favor, introduce alguna expresión para calcular.",
         "success_calc": "¡Expresión evaluada con éxito!",
         "symbolic_label": "✨ Representación Matemática Formal (LaTeX):",
+        "history_sub": "📜 Historial de Cálculos Recientes",
+        "plot_sub": "📈 Graficador 2D de Funciones",
+        "plot_desc": "Introduce una función en términos de x (ej: x**2 - 4, sin(x), log(x)):",
+        "plot_btn": "Generar Gráfica",
+        "conv_sub": "🔄 Conversor de Unidades Científicas",
+        "conv_type": "Tipo de Magnitud:",
+        "conv_val": "Valor a convertir:",
+        "conv_from": "De:",
+        "conv_to": "A:",
+        "conv_btn": "Convertir Unidades",
         "geo_sub": "📐 Entorno de Geometría Avanzada (GeoGebra en Pantalla Completa)",
         "geo_desc": "Utiliza la herramienta interactiva de GeoGebra expandida al máximo para ocupar toda la pantalla.",
-        "sys_sub": "📐 Resolución de Sistemas Lineales",
-        "matrix_label": "Matriz A (ej: 2,1 / 1,3):",
-        "vector_label": "Vector B (ej: 5,5):",
-        "solve_btn": "Resolver Sistema",
-        "sys_success": "Solución del sistema:",
-        "footer": "Consola científica avanzada impulsada por Python, Streamlit, SymPy y Google Gemini.",
+        "footer": "Consola científica avanzada impulsada por Python, Streamlit, Plotly, SymPy y Google Gemini.",
     },
     "Euskera": {
         "title": "🧮 Doitasun Handiko Kontsola Zientifikoa & Motor Sinbolikoa",
-        "subtitle": "Kalkulu sistema aurreratua ikur LaTeX-ekin, GeoGebratekin eta hizkuntza anitzeko IA Laguntzailearekin.",
+        "subtitle": "Sistema aurreratua 2D grafikoekin, unitate bihurtzailearekin, historikoarekin eta abarrekin.",
         "settings_header": "⚙️ Aplikazioaren Ezarpenak",
         "lang_label": "Idioma / Hizkuntza",
         "save_btn": "Gorde ezarpenak",
         "mode_label": "Eragiketa Modua:",
         "modes": [
             "Kalkulagailu Zientifiko Interaktiboa",
+            "2D Funtzioen Grafikatzailea",
+            "Unitate Zientifikoen Bihurtzailea",
             "Geometria Aurreratua (GeoGebra)",
-            "Sistema Linealen Ebazpena",
         ],
         "ai_header": "🤖 IA Laguntzaile Matematikoa",
-        "ai_desc": "Kudeatu zure elkarrizketak eta galdetu pantailan daukazunari buruz:",
-        "new_chat_name": "Txat berriaren izena:",
-        "create_chat_btn": "➕ Sortu Txat Berria",
-        "select_chat": "Elkarrizketa aktiboa:",
-        "rename_chat_input": "Aldatu uneko txataren izena:",
-        "rename_btn": "✏️ Aldatu Izena",
+        "ai_desc": "Galdetu pantailan daukazunari buruz (atera ez gero ezabatzen da):",
         "ai_placeholder": "Adib: Zergatik ematen du akats hau?",
         "ai_btn": "IArif galdetu",
         "calc_sub": "🔢 Kalkulagailu Zientifiko Interaktiboa & Ikur Matematikoak",
@@ -132,14 +124,19 @@ t = {
         "warning_empty": "Mesedez, sartu adierazpen bat kalkulatzeko.",
         "success_calc": "Adierazpena arrakastaz ebaluatuta!",
         "symbolic_label": "✨ Matematika Erakustaldia (LaTeX formatuan):",
+        "history_sub": "📜 Azken Kalkuluen Historikoa",
+        "plot_sub": "📈 2D Funtzioen Grafikatzailea",
+        "plot_desc": "Sartu funtzio bat x-ren arabera (adib: x**2 - 4, sin(x)):",
+        "plot_btn": "Sortu Grafikoa",
+        "conv_sub": "🔄 Unitate Zientifikoen Bihurtzailea",
+        "conv_type": "Magnitudo Mota:",
+        "conv_val": "Bihurtu beharreko balioa:",
+        "conv_from": "Hemendik:",
+        "conv_to": " Hona:",
+        "conv_btn": "Bihurtu Unitateak",
         "geo_sub": "📐 Geometria Aurreratuaren Ingurunea (GeoGebra Pantaila Osoan)",
         "geo_desc": "Erabili GeoGebraten tresna interaktiboa pantaila osoa betetzeko zabalduta.",
-        "sys_sub": "📐 Sistema Linealen Ebazpena",
-        "matrix_label": "A Matrizea (adib: 2,1 / 1,3):",
-        "vector_label": "B Bektorea (adib: 5,5):",
-        "solve_btn": "Sistema Ebatzi",
-        "sys_success": "Sistemaren soluzioa:",
-        "footer": "Kontsola zientifiko aurreratua Python, Streamlit, SymPy eta Google Geminik bultzatuta.",
+        "footer": "Kontsola zientifiko aurreratua Python, Streamlit, Plotly, SymPy eta Google Geminik bultzatuta.",
     },
 }
 
@@ -149,7 +146,6 @@ lang_texts = t[st.session_state.lang]
 # BARRA LATERAL
 # ==========================================
 with st.sidebar:
-    # 1. BOTÓN DE AJUSTES (ARRIBA)
     with st.expander(lang_texts["settings_header"], expanded=False):
         selected_lang = st.selectbox(
             lang_texts["lang_label"],
@@ -162,50 +158,14 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 2. SELECTOR DE MODOS DE LA CALCULADORA
     modo = st.selectbox(lang_texts["mode_label"], lang_texts["modes"])
 
     st.markdown("---")
 
-    # 3. ASISTENTE DE IA MATEMÁTICA CON GESTIÓN DE CHATS
     st.subheader(lang_texts["ai_header"])
     st.markdown(lang_texts["ai_desc"])
 
-    chat_names = list(st.session_state.conversations.keys())
-    selected_chat = st.selectbox(
-        lang_texts["select_chat"],
-        chat_names,
-        index=chat_names.index(st.session_state.current_chat)
-        if st.session_state.current_chat in chat_names
-        else 0,
-    )
-    if selected_chat != st.session_state.current_chat:
-        st.session_state.current_chat = selected_chat
-        st.rerun()
-
-    with st.expander("⚙️ Opciones de Conversación"):
-        new_chat_title = st.text_input(lang_texts["new_chat_name"], value="")
-        if st.button(lang_texts["create_chat_btn"]):
-            if new_chat_title.strip() and new_chat_title not in st.session_state.conversations:
-                st.session_state.conversations[new_chat_title] = []
-                st.session_state.current_chat = new_chat_title
-                st.rerun()
-
-        rename_title = st.text_input(
-            lang_texts["rename_chat_input"], value=st.session_state.current_chat
-        )
-        if st.button(lang_texts["rename_btn"]):
-            if rename_title.strip() and rename_title not in st.session_state.conversations:
-                st.session_state.conversations[rename_title] = st.session_state.conversations.pop(
-                    st.session_state.current_chat
-                )
-                st.session_state.current_chat = rename_title
-                st.rerun()
-
-    st.markdown("---")
-
-    current_messages = st.session_state.conversations[st.session_state.current_chat]
-    for msg in current_messages[-2:]:
+    for msg in st.session_state.ai_messages[-2:]:
         if msg["role"] == "user":
             st.markdown(f"**Tú / Zu:** {msg['content']}")
         else:
@@ -242,12 +202,12 @@ with st.sidebar:
                     )
                     respuesta_ia = response.text
 
-                    st.session_state.conversations[
-                        st.session_state.current_chat
-                    ].append({"role": "user", "content": user_query})
-                    st.session_state.conversations[
-                        st.session_state.current_chat
-                    ].append({"role": "assistant", "content": respuesta_ia})
+                    st.session_state.ai_messages.append(
+                        {"role": "user", "content": user_query}
+                    )
+                    st.session_state.ai_messages.append(
+                        {"role": "assistant", "content": respuesta_ia}
+                    )
                     st.rerun()
             except Exception as e:
                 st.error(f"Error: {e}")
@@ -260,122 +220,74 @@ st.markdown(lang_texts["subtitle"])
 st.markdown("---")
 
 modo_actual = modo
-if (
-    modo_actual == "Kalkulagailu Zientifiko Interaktiboa"
-    or modo_actual == "Calculadora Científica Interactiva"
-):
+
+if modo_actual in ["Calculadora Científica Interactiva", "Kalkulagailu Zientifiko Interaktiboa"]:
     st.subheader(lang_texts["calc_sub"])
     st.markdown(lang_texts["calc_desc"])
-
 
     def add_sci(val):
         st.session_state.sci_val += val
 
-
     st.markdown(lang_texts["keyboard"])
 
     b1, b2, b3, b4, b5, b6, b7 = st.columns(7)
-    if b1.button("➕ (+)"):
-        add_sci("+")
-    if b2.button("➖ (-)"):
-        add_sci("-")
-    if b3.button("✖️ (*)"):
-        add_sci("*")
-    if b4.button("➗ (/)"):
-        add_sci("/")
-    if b5.button("("):
-        add_sci("(")
-    if b6.button(")"):
-        add_sci(")")
+    if b1.button("➕ (+)"): add_sci("+")
+    if b2.button("➖ (-)"): add_sci("-")
+    if b3.button("✖️ (*)"): add_sci("*")
+    if b4.button("➗ (/)"): add_sci("/")
+    if b5.button("("): add_sci("(")
+    if b6.button(")"): add_sci(")")
     if b7.button(lang_texts["clear"]):
         st.session_state.sci_val = ""
-        st.session_state.last_result = (
-            "Limpiado." if st.session_state.lang == "Español" else "Garbituta."
-        )
+        st.session_state.last_result = "Limpiado." if st.session_state.lang == "Español" else "Garbituta."
 
     c1, c2, c3, c4, c5, c6 = st.columns(6)
-    if c1.button("7"):
-        add_sci("7")
-    if c2.button("8"):
-        add_sci("8")
-    if c3.button("9"):
-        add_sci("9")
-    if c4.button("4"):
-        add_sci("4")
-    if c5.button("5"):
-        add_sci("5")
-    if c6.button("6"):
-        add_sci("6")
+    if c1.button("7"): add_sci("7")
+    if c2.button("8"): add_sci("8")
+    if c3.button("9"): add_sci("9")
+    if c4.button("4"): add_sci("4")
+    if c5.button("5"): add_sci("5")
+    if c6.button("6"): add_sci("6")
 
     c7, c8, c9, c10, c11, c12 = st.columns(6)
-    if c7.button("1"):
-        add_sci("1")
-    if c8.button("2"):
-        add_sci("2")
-    if c9.button("3"):
-        add_sci("3")
-    if c10.button("0"):
-        add_sci("0")
-    if c11.button("."):
-        add_sci(".")
-    if c12.button("exp("):
-        add_sci("exp(")
+    if c7.button("1"): add_sci("1")
+    if c8.button("2"): add_sci("2")
+    if c9.button("3"): add_sci("3")
+    if c10.button("0"): add_sci("0")
+    if c11.button("."): add_sci(".")
+    if c12.button("exp("): add_sci("exp(")
 
     st.markdown(lang_texts["trig"])
     t1, t2, t3, t4, t5, t6, t7, t8, t9 = st.columns(9)
-    if t1.button("sen("):
-        add_sci("sin(")
-    if t2.button("cos("):
-        add_sci("cos(")
-    if t3.button("tan("):
-        add_sci("tan(")
-    if t4.button("senh("):
-        add_sci("sinh(")
-    if t5.button("cosh("):
-        add_sci("cosh(")
-    if t6.button("tanh("):
-        add_sci("tanh(")
-    if t7.button("arcoseno("):
-        add_sci("asin(")
-    if t8.button("arcocoseno("):
-        add_sci("acos(")
-    if t9.button("arcotangente("):
-        add_sci("atan(")
+    if t1.button("sen("): add_sci("sin(")
+    if t2.button("cos("): add_sci("cos(")
+    if t3.button("tan("): add_sci("tan(")
+    if t4.button("senh("): add_sci("sinh(")
+    if t5.button("cosh("): add_sci("cosh(")
+    if t6.button("tanh("): add_sci("tanh(")
+    if t7.button("arcoseno("): add_sci("asin(")
+    if t8.button("arcocoseno("): add_sci("acos(")
+    if t9.button("arcotangente("): add_sci("atan(")
 
     st.markdown(lang_texts["powers"])
     p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12 = st.columns(12)
-    if p1.button("sqrt("):
-        add_sci("sqrt(")
-    if p2.button("cbrt("):
-        add_sci("cbrt(")
-    if p3.button("**"):
-        add_sci("**")
-    if p4.button("/"):
-        add_sci("/")
-    if p5.button("!"):
-        add_sci("factorial(")
-    if p6.button("%"):
-        add_sci("%")
-    if p7.button("lg("):
-        add_sci("log10(")
-    if p8.button("ln("):
-        add_sci("ln(")
-    if p9.button("log("):
-        add_sci("log(")
-    if p10.button("π"):
-        add_sci("pi")
-    if p11.button("ℯ"):
-        add_sci("e")
-    if p12.button("x"):
-        add_sci("x")
+    if p1.button("sqrt("): add_sci("sqrt(")
+    if p2.button("cbrt("): add_sci("cbrt(")
+    if p3.button("**"): add_sci("**")
+    if p4.button("/"): add_sci("/")
+    if p5.button("!"): add_sci("factorial(")
+    if p6.button("%"): add_sci("%")
+    if p7.button("lg("): add_sci("log10(")
+    if p8.button("ln("): add_sci("ln(")
+    if p9.button("log("): add_sci("log(")
+    if p10.button("π"): add_sci("pi")
+    if p11.button("ℯ"): add_sci("e")
+    if p12.button("x"): add_sci("x")
 
     v1, v2, v3 = st.columns(3)
-    if v1.button("a"):
-        add_sci("a")
-    if v2.button("b"):
-        add_sci("b")
-    if v3.button("c"):
-        add_sci("c")
+    if v1.button("a"): add_sci("a")
+    if v2.button("b"): add_sci("b")
+    if v3.button("c"): add_sci("c")
 
     sci_input = st.text_input(lang_texts["input_label"], key="sci_val")
 
@@ -384,66 +296,130 @@ if (
             st.warning(lang_texts["warning_empty"])
         else:
             try:
-                # 1. Cálculo numérico de ultra-precisión con mpmath
                 safe_dict = {
-                    "sin": mpmath.sin,
-                    "cos": mpmath.cos,
-                    "tan": mpmath.tan,
-                    "sinh": mpmath.sinh,
-                    "cosh": mpmath.cosh,
-                    "tanh": mpmath.tanh,
-                    "asin": mpmath.asin,
-                    "acos": mpmath.acos,
-                    "atan": mpmath.atan,
-                    "sqrt": mpmath.sqrt,
-                    "exp": mpmath.exp,
+                    "sin": mpmath.sin, "cos": mpmath.cos, "tan": mpmath.tan,
+                    "sinh": mpmath.sinh, "cosh": mpmath.cosh, "tanh": mpmath.tanh,
+                    "asin": mpmath.asin, "acos": mpmath.acos, "atan": mpmath.atan,
+                    "sqrt": mpmath.sqrt, "exp": mpmath.exp,
                     "cbrt": lambda val: mpmath.power(val, 1 / 3),
-                    "factorial": mpmath.factorial,
-                    "log10": mpmath.log10,
-                    "ln": mpmath.ln,
-                    "log": mpmath.log,
-                    "pi": mpmath.pi,
-                    "e": mpmath.e,
-                    "x": 1,
-                    "a": 1,
-                    "b": 1,
-                    "c": 1,
+                    "factorial": mpmath.factorial, "log10": mpmath.log10,
+                    "ln": mpmath.ln, "log": mpmath.log, "pi": mpmath.pi,
+                    "e": mpmath.e, "x": 1, "a": 1, "b": 1, "c": 1,
                     "__builtins__": None,
                 }
                 resultado_eval = eval(sci_input, safe_dict, {})
                 res_sci = mpmath.nstr(resultado_eval, 30)
 
-                st.session_state.last_result = (
-                    f"Expresión: {sci_input} | Resultado: {res_sci}"
-                )
+                st.session_state.last_result = f"Expresión: {sci_input} | Resultado: {res_sci}"
                 st.success(lang_texts["success_calc"])
-
-                # Mostrar resultado numérico exacto de 30 decimales
                 st.code(res_sci, language="text")
 
-                # 2. Renderizado de símbolos matemáticos reales mediante SymPy (LaTeX)
+                # Guardar en historial (máximo 5 elementos)
+                st.session_state.history.insert(0, {"expr": sci_input, "res": res_sci})
+                if len(st.session_state.history) > 5:
+                    st.session_state.history.pop()
+
                 st.markdown(lang_texts["symbolic_label"])
-                
-                # Traducir sintaxis común para SymPy
                 expr_sympy_str = (
                     sci_input.replace("ln(", "log(")
                     .replace("log10(", "log(..., 10)")
                     .replace("cbrt(", "(...)**(1/3)")
                 )
-                
                 expr_simbolica = sp.sympify(expr_sympy_str, evaluate=False)
                 st.latex(sp.latex(expr_simbolica))
 
             except Exception as e:
-                st.session_state.last_result = (
-                    f"Expresión: {sci_input} | Error: {e}"
-                )
+                st.session_state.last_result = f"Expresión: {sci_input} | Error: {e}"
                 st.error(f"Error: {e}")
 
-elif (
-    modo_actual == "Geometria Aurreratua (GeoGebra)"
-    or modo_actual == "Geometría Avanzada (GeoGebra)"
-):
+    # Mostrar Historial Reciente
+    if st.session_state.history:
+        st.markdown("---")
+        st.subheader(lang_texts["history_sub"])
+        for idx, item in enumerate(st.session_state.history):
+            st.text(f"#{idx+1} -> {item['expr']} = {item['res'][:15]}...")
+
+elif modo_actual in ["Graficador 2D de Funciones", "2D Funtzioen Grafikatzailea"]:
+    st.subheader(lang_texts["plot_sub"])
+    st.markdown(lang_texts["plot_desc"])
+
+    func_input = st.text_input("f(x) =", value="x**2 - 2*x - 3")
+    col1, col2 = st.columns(2)
+    xmin = col1.number_input("X mínimo", value=-10.0)
+    xmax = col2.number_input("X máximo", value=10.0)
+
+    if st.button(lang_texts["plot_btn"], type="primary"):
+        try:
+            x_vals = np.linspace(xmin, xmax, 400)
+            # Evaluar usando numpy de forma segura
+            safe_np_dict = {
+                "sin": np.sin, "cos": np.cos, "tan": np.tan,
+                "sinh": np.sinh, "cosh": np.cosh, "tanh": np.tanh,
+                "arcsin": np.arcsin, "arccos": np.arccos, "arctan": np.arctan,
+                "sqrt": np.sqrt, "exp": np.exp, "log": np.log, "log10": np.log10,
+                "pi": np.pi, "e": np.e, "x": x_vals, "__builtins__": None
+            }
+            y_vals = eval(func_input, safe_np_dict, {})
+
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', name=f"f(x) = {func_input}", line=dict(color='#00ffcc', width=2)))
+            fig.update_layout(
+                paper_bgcolor='#0e1117',
+                plot_bgcolor='#161b22',
+                font=dict(color='#c9d1d9'),
+                xaxis=dict(gridcolor='#30363d'),
+                yaxis=dict(gridcolor='#30363d'),
+                margin=dict(l=20, r=20, t=20, b=20)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.session_state.last_result = f"Gráfica generada para f(x) = {func_input}"
+        except Exception as e:
+            st.error(f"Error al graficar: {e}")
+
+elif modo_actual in ["Conversor de Unidades Científicas", "Unitate Zientifikoen Bihurtzailea"]:
+    st.subheader(lang_texts["conv_sub"])
+
+    tipo_magnitud = st.selectbox(lang_texts["conv_type"], ["Ángulo", "Longitud", "Temperatura"])
+    
+    if tipo_magnitud == "Ángulo":
+        unidades = {"Radianes": 1.0, "Grados": np.pi / 180, "Gradiantes": np.pi / 200}
+    elif tipo_magnitud == "Longitud":
+        unidades = {"Metros": 1.0, "Kilómetros": 1000.0, "Millas": 1609.34, "Pies": 0.3048}
+    else:
+        unidades = {"Celsius": "C", "Fahrenheit": "F", "Kelvin": "K"}
+
+    val_ingresado = st.number_input(lang_texts["conv_val"], value=1.0)
+    
+    if tipo_magnitud != "Temperatura":
+        from_u = st.selectbox(lang_texts["conv_from"], list(unidades.keys()))
+        to_u = st.selectbox(lang_texts["conv_to"], list(unidades.keys()), index=1 if len(unidades) > 1 else 0)
+        
+        if st.button(lang_texts["conv_btn"], type="primary"):
+            # Convertir a unidad base y luego a la unidad de destino
+            en_base = val_ingresado * unidades[from_u]
+            resultado_conv = en_base / unidades[to_u]
+            st.success(f"Resultado: {val_ingresado} {from_u} = {resultado_conv} {to_u}")
+            st.session_state.last_result = f"Conversión: {val_ingresado} {from_u} = {resultado_conv} {to_u}"
+    else:
+        from_u = st.selectbox(lang_texts["conv_from"], list(unidades.keys()))
+        to_u = st.selectbox(lang_texts["conv_to"], list(unidades.keys()), index=2)
+        
+        if st.button(lang_texts["conv_btn"], type="primary"):
+            # Lógica específica para temperatura
+            # Convertir a Celsius primero
+            if from_u == "Celsius": c = val_ingresado
+            elif from_u == "Fahrenheit": c = (val_ingresado - 32) * 5/9
+            else: c = val_ingresado - 273.15
+            
+            # Convertir de Celsius a destino
+            if to_u == "Celsius": res_t = c
+            elif to_u == "Fahrenheit": res_t = c * 9/5 + 32
+            else: res_t = c + 273.15
+            
+            st.success(f"Resultado: {val_ingresado} {from_u} = {res_t} {to_u}")
+            st.session_state.last_result = f"Conversión: {val_ingresado} {from_u} = {res_t} {to_u}"
+
+else:
     st.subheader(lang_texts["geo_sub"])
     st.markdown(lang_texts["geo_desc"])
     st.session_state.last_result = (
@@ -458,26 +434,6 @@ elif (
     </div>
     """
     st.components.v1.html(geogebra_html, height=750, scrolling=False)
-
-else:
-    st.subheader(lang_texts["sys_sub"])
-    matriz_txt = st.text_area(lang_texts["matrix_label"], value="2, 1\n1, 3")
-    vector_txt = st.text_input(lang_texts["vector_label"], value="5, 5")
-    if st.button(lang_texts["solve_btn"], type="primary"):
-        try:
-            A = np.array(
-                [[float(n) for n in l.split(",")] for l in matriz_txt.split("\n")]
-            )
-            B = np.array([float(n) for n in vector_txt.split(",")])
-            sol = np.linalg.solve(A, B)
-            st.session_state.last_result = (
-                f"Matriz A:\n{matriz_txt}\nVector B: {vector_txt}\nSolución: {sol}"
-            )
-            st.success(lang_texts["sys_success"])
-            st.write(sol)
-        except Exception as e:
-            st.session_state.last_result = f"Error: {e}"
-            st.error(f"Error: {e}")
 
 st.markdown("---")
 st.caption(lang_texts["footer"])
