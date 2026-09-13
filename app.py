@@ -2,7 +2,6 @@ import mpmath
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
-import sympy as sp
 
 mpmath.mp.dps = 30
 
@@ -43,7 +42,7 @@ st.markdown(
 
 st.title("🧮 Consola Científica de Precisión & Motor Simbólico")
 st.markdown(
-    "Sistema de cálculo avanzado con teclados virtuales unificados, plano interactivo dinámico y GeoGebra integrado."
+    "Sistema de cálculo avanzado con teclados virtuales unificados y GeoGebra integrado."
 )
 st.markdown("---")
 
@@ -51,7 +50,6 @@ modo = st.sidebar.selectbox(
     "Modo de Operación:",
     [
         "Calculadora Científica Interactiva",
-        "Cálculo Simbólico, Derivadas/Integrales y Plano Cartesiano",
         "Geometría Avanzada (GeoGebra)",
         "Resolución de Sistemas Lineales",
     ],
@@ -75,7 +73,6 @@ if modo == "Calculadora Científica Interactiva":
 
     st.markdown("**⌨️ Teclado Científico Unificado:**")
 
-    # Fila de operadores numéricos básicos y de alta precisión
     b1, b2, b3, b4, b5, b6, b7 = st.columns(7)
     if b1.button("➕ (+)"):
         add_sci("+")
@@ -92,7 +89,6 @@ if modo == "Calculadora Científica Interactiva":
     if b7.button("🗑️ Clear"):
         st.session_state.sci_val = ""
 
-    # Fila de números y punto
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     if c1.button("7"):
         add_sci("7")
@@ -219,80 +215,6 @@ if modo == "Calculadora Científica Interactiva":
                 st.code(res_sci, language="text")
             except Exception as e:
                 st.error(f"Error en el cálculo: {e}")
-
-elif modo == "Cálculo Simbólico, Derivadas/Integrales y Plano Cartesiano":
-    st.subheader("∫ Motor Simbólico y Editor Dinámico del Plano Cartesiano")
-    st.markdown(
-        "Mueve los controles deslizantes o edita los parámetros para transformar el dibujo en tiempo real; la fórmula analítica se actualizará automáticamente."
-    )
-
-    col_param1, col_param2, col_param3, col_param4 = st.columns(4)
-    with col_param1:
-        coef_a = st.slider("Coeficiente a (Curvatura)", -5.0, 5.0, 1.0, 0.1)
-    with col_param2:
-        coef_b = st.slider("Coeficiente b (Pendiente)", -5.0, 5.0, 0.0, 0.1)
-    with col_param3:
-        coef_c = st.slider("Coeficiente c (Desplazamiento Y)", -10.0, 10.0, 0.0, 0.5)
-    with col_param4:
-        shift_x = st.slider("Desplazamiento X", -5.0, 5.0, 0.0, 0.5)
-
-    func_input = f"{coef_a}*(x - {shift_x})**2 + {coef_b}*(x - {shift_x}) + {coef_c}"
-    st.info(f"📌 **Fórmula Actualizada Automáticamente:** `f(x) = {func_input}`")
-
-    x = sp.Symbol("x")
-
-    try:
-        expr = sp.sympify(func_input)
-        st.markdown("---")
-        st.subheader("📊 Resultados Analíticos")
-
-        derivada = sp.diff(expr, x)
-        integral = sp.integrate(expr, x)
-
-        st.latex(f"f(x) = {sp.latex(expr)}")
-        st.latex(f"\\frac{{d}}{{dx}} f(x) = {sp.latex(derivada)}")
-        st.latex(f"\\int f(x) \\, dx = {sp.latex(integral)} + C")
-
-        st.markdown("---")
-        st.subheader("📈 Plano Cartesiano Dinámico e Interactivo")
-
-        f_lambdified = sp.lambdify(x, expr, modules=["numpy"])
-        x_vals = np.linspace(-15, 15, 500)
-        y_vals = f_lambdified(x_vals)
-
-        fig = go.Figure()
-        fig.add_trace(
-            go.Scatter(
-                x=x_vals,
-                y=y_vals,
-                mode="lines",
-                name=f"f(x)",
-                line=dict(color="#00ffcc", width=3.5),
-            )
-        )
-        fig.update_layout(
-            title="Plano Cartesiano con Actualización Dinámica de Fórmula",
-            xaxis_title="Eje X",
-            yaxis_title="Eje Y",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="#161b22",
-            font_color="white",
-            xaxis=dict(
-                zeroline=True,
-                zerolinewidth=2,
-                zerolinecolor="gray",
-                gridcolor="#30363d",
-            ),
-            yaxis=dict(
-                zeroline=True,
-                zerolinewidth=2,
-                zerolinecolor="gray",
-                gridcolor="#30363d",
-            ),
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    except Exception as e:
-        st.error(f"Error al procesar la función dinámica: {e}")
 
 elif modo == "Geometría Avanzada (GeoGebra)":
     st.subheader("📐 Entorno de Geometría Avanzada (GeoGebra en Pantalla Completa)")
