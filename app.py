@@ -48,6 +48,8 @@ if "sci_val" not in st.session_state:
     st.session_state.sci_val = ""
 if "last_result" not in st.session_state:
     st.session_state.last_result = "Ningún cálculo realizado todavía."
+if "last_numeric_res" not in st.session_state:
+    st.session_state.last_numeric_res = None
 if "ai_messages" not in st.session_state:
     st.session_state.ai_messages = []
 if "history" not in st.session_state:
@@ -80,6 +82,8 @@ t = {
         "powers": "Potencias, Raíces, Logaritmos y Constantes:",
         "input_label": "Expresión Científica:",
         "calc_btn": "🚀 Calcular Expresión y Mostrar Símbolos",
+        "simplify_btn": "🧹 Simplificar Número (Redondear)",
+        "decimals_label": "Número de decimales:",
         "warning_empty": "Por favor, introduce alguna expresión para calcular.",
         "success_calc": "¡Expresión evaluada con éxito!",
         "symbolic_label": "✨ Representación Matemática Formal (LaTeX):",
@@ -123,6 +127,8 @@ t = {
         "powers": "Berreketak, Erraiak, Logaritmoak eta Konstanteak:",
         "input_label": "Adierazpen Zientifikoa:",
         "calc_btn": "🚀 Kalkulatu Adierazpena eta Erakutsi Ikurrak",
+        "simplify_btn": "🧹 Sinplifikatu Zenbakia (Borobildu)",
+        "decimals_label": "Hamartar kopurua:",
         "warning_empty": "Mesedez, sartu adierazpen bat kalkulatzeko.",
         "success_calc": "Adierazpena arrakastaz ebaluatuta!",
         "symbolic_label": "✨ Matematika Erakustaldia (LaTeX formatuan):",
@@ -261,7 +267,16 @@ if modo_actual in ["Calculadora Científica Interactiva", "Kalkulagailu Zientifi
 
     sci_input = st.text_input(lang_texts["input_label"], key="sci_val")
 
-    if st.button(lang_texts["calc_btn"], type="primary"):
+    col_btn1, col_btn2 = st.columns([2, 2])
+    with col_btn1:
+        calc_pressed = st.button(lang_texts["calc_btn"], type="primary")
+    with col_btn2:
+        simplify_pressed = st.button(lang_texts["simplify_btn"])
+
+    # Selector de decimales para redondear si se desea
+    num_decimals = st.slider(lang_texts["decimals_label"], min_value=0, max_value=15, value=4)
+
+    if calc_pressed:
         if not sci_input.strip():
             st.warning(lang_texts["warning_empty"])
         else:
@@ -280,6 +295,7 @@ if modo_actual in ["Calculadora Científica Interactiva", "Kalkulagailu Zientifi
                 resultado_eval = eval(sci_input, safe_dict, {})
                 res_sci = mpmath.nstr(resultado_eval, 30)
 
+                st.session_state.last_numeric_res = float(mpmath.mpf(resultado_eval))
                 st.session_state.last_result = f"Expresión: {sci_input} | Resultado: {res_sci}"
                 st.success(lang_texts["success_calc"])
                 st.code(res_sci, language="text")
@@ -300,6 +316,14 @@ if modo_actual in ["Calculadora Científica Interactiva", "Kalkulagailu Zientifi
             except Exception as e:
                 st.session_state.last_result = f"Expresión: {sci_input} | Error: {e}"
                 st.error(f"Error: {e}")
+
+    elif simplify_pressed:
+        if st.session_state.last_numeric_res is not None:
+            val_simplificado = round(st.session_state.last_numeric_res, num_decimals)
+            st.success(f"Resultado simplificado ({num_decimals} decimales):")
+            st.code(str(val_simplificado), language="text")
+        else:
+            st.warning("Primero debes realizar un cálculo válido para poder simplificarlo.")
 
     if st.session_state.history:
         st.markdown("---")
