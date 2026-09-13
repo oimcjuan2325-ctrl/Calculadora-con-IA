@@ -40,25 +40,27 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Inicializar estados de sesión para idioma y app
+# Inicializar estados globales de la aplicación
 if "lang" not in st.session_state:
     st.session_state.lang = "Español"
 if "sci_val" not in st.session_state:
     st.session_state.sci_val = ""
 if "last_result" not in st.session_state:
-    st.session_state.last_result = (
-        "Ningún cálculo realizado todavía."
-        if st.session_state.lang == "Español"
-        else "Oraindik ez da kalkulurik egin."
-    )
-if "ai_messages" not in st.session_state:
-    st.session_state.ai_messages = []
+    st.session_state.last_result = "Ningún cálculo realizado todavía."
+
+# Sistema de gestión de múltiples chats en la IA
+if "conversations" not in st.session_state:
+    st.session_state.conversations = {
+        "Chat Principal": []
+    }
+if "current_chat" not in st.session_state:
+    st.session_state.current_chat = "Chat Principal"
 
 # Diccionario de traducciones para la interfaz
 t = {
     "Español": {
         "title": "🧮 Consola Científica de Precisión & Motor Simbólico",
-        "subtitle": "Sistema de cálculo avanzado con teclados virtuales, GeoGebra y Asistente IA en el menú lateral.",
+        "subtitle": "Sistema de cálculo avanzado con teclados virtuales, GeoGebra y Asistente IA con historial de chats.",
         "settings_header": "⚙️ Ajustes de la App",
         "lang_label": "Idioma / Hizkuntza",
         "save_btn": "Guardar ajustes",
@@ -69,7 +71,12 @@ t = {
             "Resolución de Sistemas Lineales",
         ],
         "ai_header": "🤖 Asistente Matemático IA",
-        "ai_desc": "Pregúntale sobre lo que hay en pantalla (errores, conceptos...):",
+        "ai_desc": "Gestiona tus conversaciones y pregunta sobre lo que hay en pantalla:",
+        "new_chat_name": "Nombre del nuevo chat:",
+        "create_chat_btn": "➕ Crear Nuevo Chat",
+        "select_chat": "Conversación activa:",
+        "rename_chat_input": "Renombrar chat actual:",
+        "rename_btn": "✏️ Cambiar Nombre",
         "ai_placeholder": "Ej: ¿Por qué da error esto?",
         "ai_btn": "Preguntar a la IA",
         "calc_sub": "🔢 Calculadora Científica Interactiva & Alta Precisión (30+ decimales)",
@@ -93,7 +100,7 @@ t = {
     },
     "Euskera": {
         "title": "🧮 Doitasun Handiko Kontsola Zientifikoa & Motor Sinbolikoa",
-        "subtitle": "Kalkulu sistema aurreratua teklatu birtualekin, GeoGebratekin eta IA Laguntzailearekin albo-menuan.",
+        "subtitle": "Kalkulu sistema aurreratua teklatu birtualekin, GeoGebratekin eta txat-historiala duen IA Laguntzailearekin.",
         "settings_header": "⚙️ Aplikazioaren Ezarpenak",
         "lang_label": "Idioma / Hizkuntza",
         "save_btn": "Gorde ezarpenak",
@@ -104,7 +111,12 @@ t = {
             "Sistema Linealen Ebazpena",
         ],
         "ai_header": "🤖 IA Laguntzaile Matematikoa",
-        "ai_desc": "Galdetu pantailan daukazunari buruz (akatsak, kontzeptuak...):",
+        "ai_desc": "Kudeatu zure elkarrizketak eta galdetu pantailan daukazunari buruz:",
+        "new_chat_name": "Txat berriaren izena:",
+        "create_chat_btn": "➕ Sortu Txat Berria",
+        "select_chat": "Elkarrizketa aktiboa:",
+        "rename_chat_input": "Aldatu uneko txataren izena:",
+        "rename_btn": "✏️ Aldatu Izena",
         "ai_placeholder": "Adib: Zergatik ematen du akats hau?",
         "ai_btn": "IArif galdetu",
         "calc_sub": "🔢 Kalkulagailu Zientifiko Interaktiboa & Doitasun Handia (30+ hamartar)",
@@ -131,7 +143,7 @@ t = {
 lang_texts = t[st.session_state.lang]
 
 # ==========================================
-# BARRA LATERAL (Ajustes Arriba -> Selector de Modos -> Asistente IA)
+# BARRA LATERAL (Ajustes -> Selector de Modos -> Gestor de Chats IA)
 # ==========================================
 with st.sidebar:
     # 1. BOTÓN DE AJUSTES (ARRIBA)
@@ -152,11 +164,48 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 3. ASISTENTE DE IA MATEMÁTICA
+    # 3. ASISTENTE DE IA MATEMÁTICA CON GESTIÓN DE CHATS
     st.subheader(lang_texts["ai_header"])
     st.markdown(lang_texts["ai_desc"])
 
-    for msg in st.session_state.ai_messages[-2:]:
+    # Selector de chat actual
+    chat_names = list(st.session_state.conversations.keys())
+    selected_chat = st.selectbox(
+        lang_texts["select_chat"],
+        chat_names,
+        index=chat_names.index(st.session_state.current_chat)
+        if st.session_state.current_chat in chat_names
+        else 0,
+    )
+    if selected_chat != st.session_state.current_chat:
+        st.session_state.current_chat = selected_chat
+        st.rerun()
+
+    # Opciones para crear nuevo chat o renombrar
+    with st.expander("⚙️ Opciones de Conversación"):
+        new_chat_title = st.text_input(lang_texts["new_chat_name"], value="")
+        if st.button(lang_texts["create_chat_btn"]):
+            if new_chat_title.strip() and new_chat_title not in st.session_state.conversations:
+                st.session_state.conversations[new_chat_title] = []
+                st.session_state.current_chat = new_chat_title
+                st.rerun()
+
+        rename_title = st.text_input(
+            lang_texts["rename_chat_input"], value=st.session_state.current_chat
+        )
+        if st.button(lang_texts["rename_btn"]):
+            if rename_title.strip() and rename_title not in st.session_state.conversations:
+                st.session_state.conversations[rename_title] = st.session_state.conversations.pop(
+                    st.session_state.current_chat
+                )
+                st.session_state.current_chat = rename_title
+                st.rerun()
+
+    st.markdown("---")
+
+    # Mostrar mensajes del chat actual
+    current_messages = st.session_state.conversations[st.session_state.current_chat]
+    for msg in current_messages[-2:]:
         if msg["role"] == "user":
             st.markdown(f"**Tú / Zu:** {msg['content']}")
         else:
@@ -180,7 +229,6 @@ with st.sidebar:
                         "last_result", "Sin datos"
                     )
 
-                    # Instrucción de sistema para forzar el idioma en la IA
                     system_prompt = (
                         f"Eres un profesor experto en matemáticas. Responde SIEMPRE en el idioma: {st.session_state.lang}. "
                         "Analiza el contexto actual de la pantalla del usuario y responde de forma concisa y directa "
@@ -194,12 +242,13 @@ with st.sidebar:
                     )
                     respuesta_ia = response.text
 
-                    st.session_state.ai_messages.append(
-                        {"role": "user", "content": user_query}
-                    )
-                    st.session_state.ai_messages.append(
-                        {"role": "assistant", "content": respuesta_ia}
-                    )
+                    # Guardar en el chat actual seleccionado
+                    st.session_state.conversations[
+                        st.session_state.current_chat
+                    ].append({"role": "user", "content": user_query})
+                    st.session_state.conversations[
+                        st.session_state.current_chat
+                    ].append({"role": "assistant", "content": respuesta_ia})
                     st.rerun()
             except Exception as e:
                 st.error(f"Error: {e}")
@@ -211,7 +260,6 @@ st.title(lang_texts["title"])
 st.markdown(lang_texts["subtitle"])
 st.markdown("---")
 
-# Mapeo de modos según el idioma seleccionado
 modo_actual = modo
 if (
     modo_actual == "Kalkulagailu Zientifiko Interaktiboa"
@@ -376,7 +424,7 @@ if (
                 st.error(f"Error: {e}")
 
 elif (
-    modo_actual == "Geometría Aurreratua (GeoGebra)"
+    modo_actual == "Geometria Aurreratua (GeoGebra)"
     or modo_actual == "Geometría Avanzada (GeoGebra)"
 ):
     st.subheader(lang_texts["geo_sub"])
