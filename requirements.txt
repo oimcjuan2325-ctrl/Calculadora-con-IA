@@ -2,4 +2,4 @@ streamlit
 mpmath
 numpy
 plotly
-sympy
+google-genai
