@@ -1,6 +1,7 @@
 import mpmath
 import numpy as np
 import streamlit as st
+import sympy as sp
 from google import genai
 
 mpmath.mp.dps = 30
@@ -60,7 +61,7 @@ if "current_chat" not in st.session_state:
 t = {
     "Español": {
         "title": "🧮 Consola Científica de Precisión & Motor Simbólico",
-        "subtitle": "Sistema de cálculo avanzado con teclados virtuales, GeoGebra y Asistente IA con historial de chats.",
+        "subtitle": "Sistema de cálculo avanzado con símbolos LaTeX, GeoGebra y Asistente IA multilingüe.",
         "settings_header": "⚙️ Ajustes de la App",
         "lang_label": "Idioma / Hizkuntza",
         "save_btn": "Guardar ajustes",
@@ -79,16 +80,17 @@ t = {
         "rename_btn": "✏️ Cambiar Nombre",
         "ai_placeholder": "Ej: ¿Por qué da error esto?",
         "ai_btn": "Preguntar a la IA",
-        "calc_sub": "🔢 Calculadora Científica Interactiva & Alta Precisión (30+ decimales)",
-        "calc_desc": "Utiliza el teclado virtual unificado para realizar operaciones científicas completas y evaluaciones extremas.",
+        "calc_sub": "🔢 Calculadora Científica Interactiva & Símbolos Matemáticos",
+        "calc_desc": "Usa el teclado virtual. Las expresiones se renderizan automáticamente con notación matemática formal.",
         "keyboard": "⌨️ Teclado Científico Unificado:",
         "clear": "🗑️ Borrar",
         "trig": "Trigonometría e Hiperbólicas:",
         "powers": "Potencias, Raíces, Logaritmos y Constantes:",
-        "input_label": "Expresión Científica de Alta Precisión:",
-        "calc_btn": "🚀 Calcular Resultado con 30+ Decimales",
+        "input_label": "Expresión Científica:",
+        "calc_btn": "🚀 Calcular Expresión y Mostrar Símbolos",
         "warning_empty": "Por favor, introduce alguna expresión para calcular.",
-        "success_calc": "¡Resultado calculado con éxito (30 decimales)!",
+        "success_calc": "¡Expresión evaluada con éxito!",
+        "symbolic_label": "✨ Representación Matemática Formal (LaTeX):",
         "geo_sub": "📐 Entorno de Geometría Avanzada (GeoGebra en Pantalla Completa)",
         "geo_desc": "Utiliza la herramienta interactiva de GeoGebra expandida al máximo para ocupar toda la pantalla.",
         "sys_sub": "📐 Resolución de Sistemas Lineales",
@@ -96,11 +98,11 @@ t = {
         "vector_label": "Vector B (ej: 5,5):",
         "solve_btn": "Resolver Sistema",
         "sys_success": "Solución del sistema:",
-        "footer": "Consola científica avanzada impulsada por Python, Streamlit y Google Gemini.",
+        "footer": "Consola científica avanzada impulsada por Python, Streamlit, SymPy y Google Gemini.",
     },
     "Euskera": {
         "title": "🧮 Doitasun Handiko Kontsola Zientifikoa & Motor Sinbolikoa",
-        "subtitle": "Kalkulu sistema aurreratua teklatu birtualekin, GeoGebratekin eta txat-historiala duen IA Laguntzailearekin.",
+        "subtitle": "Kalkulu sistema aurreratua ikur LaTeX-ekin, GeoGebratekin eta hizkuntza anitzeko IA Laguntzailearekin.",
         "settings_header": "⚙️ Aplikazioaren Ezarpenak",
         "lang_label": "Idioma / Hizkuntza",
         "save_btn": "Gorde ezarpenak",
@@ -119,16 +121,17 @@ t = {
         "rename_btn": "✏️ Aldatu Izena",
         "ai_placeholder": "Adib: Zergatik ematen du akats hau?",
         "ai_btn": "IArif galdetu",
-        "calc_sub": "🔢 Kalkulagailu Zientifiko Interaktiboa & Doitasun Handia (30+ hamartar)",
-        "calc_desc": "Erabili teklatu birtual bateratua eragiketa zientifiko osoak eta muturreko ebaluazioak egiteko.",
+        "calc_sub": "🔢 Kalkulagailu Zientifiko Interaktiboa & Ikur Matematikoak",
+        "calc_desc": "Erabili teklatu birtuala. Adierazpenak modu formalean marrazten dira pantailan.",
         "keyboard": "⌨️ Teklatu Zientifiko Bateratua:",
         "clear": "🗑️ Garbitu",
         "trig": "Trigonometria eta Hiperbolikoak:",
         "powers": "Berreketak, Erraiak, Logaritmoak eta Konstanteak:",
-        "input_label": "Doitasun Handiko Adierazpen Zientifikoa:",
-        "calc_btn": "🚀 Kalkulatu emaitza 30+ hamartarrekin",
+        "input_label": "Adierazpen Zientifikoa:",
+        "calc_btn": "🚀 Kalkulatu Adierazpena eta Erakutsi Ikurrak",
         "warning_empty": "Mesedez, sartu adierazpen bat kalkulatzeko.",
-        "success_calc": "Emaitza arrakastaz kalkulatuta (30 hamartar)!",
+        "success_calc": "Adierazpena arrakastaz ebaluatuta!",
+        "symbolic_label": "✨ Matematika Erakustaldia (LaTeX formatuan):",
         "geo_sub": "📐 Geometria Aurreratuaren Ingurunea (GeoGebra Pantaila Osoan)",
         "geo_desc": "Erabili GeoGebraten tresna interaktiboa pantaila osoa betetzeko zabalduta.",
         "sys_sub": "📐 Sistema Linealen Ebazpena",
@@ -136,14 +139,14 @@ t = {
         "vector_label": "B Bektorea (adib: 5,5):",
         "solve_btn": "Sistema Ebatzi",
         "sys_success": "Sistemaren soluzioa:",
-        "footer": "Kontsola zientifiko aurreratua Python, Streamlit eta Google Geminik bultzatuta.",
+        "footer": "Kontsola zientifiko aurreratua Python, Streamlit, SymPy eta Google Geminik bultzatuta.",
     },
 }
 
 lang_texts = t[st.session_state.lang]
 
 # ==========================================
-# BARRA LATERAL (Ajustes -> Selector de Modos -> Gestor de Chats IA)
+# BARRA LATERAL
 # ==========================================
 with st.sidebar:
     # 1. BOTÓN DE AJUSTES (ARRIBA)
@@ -168,7 +171,6 @@ with st.sidebar:
     st.subheader(lang_texts["ai_header"])
     st.markdown(lang_texts["ai_desc"])
 
-    # Selector de chat actual
     chat_names = list(st.session_state.conversations.keys())
     selected_chat = st.selectbox(
         lang_texts["select_chat"],
@@ -181,7 +183,6 @@ with st.sidebar:
         st.session_state.current_chat = selected_chat
         st.rerun()
 
-    # Opciones para crear nuevo chat o renombrar
     with st.expander("⚙️ Opciones de Conversación"):
         new_chat_title = st.text_input(lang_texts["new_chat_name"], value="")
         if st.button(lang_texts["create_chat_btn"]):
@@ -203,7 +204,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Mostrar mensajes del chat actual
     current_messages = st.session_state.conversations[st.session_state.current_chat]
     for msg in current_messages[-2:]:
         if msg["role"] == "user":
@@ -242,7 +242,6 @@ with st.sidebar:
                     )
                     respuesta_ia = response.text
 
-                    # Guardar en el chat actual seleccionado
                     st.session_state.conversations[
                         st.session_state.current_chat
                     ].append({"role": "user", "content": user_query})
@@ -385,6 +384,7 @@ if (
             st.warning(lang_texts["warning_empty"])
         else:
             try:
+                # 1. Cálculo numérico de ultra-precisión con mpmath
                 safe_dict = {
                     "sin": mpmath.sin,
                     "cos": mpmath.cos,
@@ -412,11 +412,28 @@ if (
                 }
                 resultado_eval = eval(sci_input, safe_dict, {})
                 res_sci = mpmath.nstr(resultado_eval, 30)
+
                 st.session_state.last_result = (
                     f"Expresión: {sci_input} | Resultado: {res_sci}"
                 )
                 st.success(lang_texts["success_calc"])
+
+                # Mostrar resultado numérico exacto de 30 decimales
                 st.code(res_sci, language="text")
+
+                # 2. Renderizado de símbolos matemáticos reales mediante SymPy (LaTeX)
+                st.markdown(lang_texts["symbolic_label"])
+                
+                # Traducir sintaxis común para SymPy
+                expr_sympy_str = (
+                    sci_input.replace("ln(", "log(")
+                    .replace("log10(", "log(..., 10)")
+                    .replace("cbrt(", "(...)**(1/3)")
+                )
+                
+                expr_simbolica = sp.sympify(expr_sympy_str, evaluate=False)
+                st.latex(sp.latex(expr_simbolica))
+
             except Exception as e:
                 st.session_state.last_result = (
                     f"Expresión: {sci_input} | Error: {e}"
