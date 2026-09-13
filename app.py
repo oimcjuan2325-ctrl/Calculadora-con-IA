@@ -56,7 +56,7 @@ if "history" not in st.session_state:
 t = {
     "Español": {
         "title": "🧮 Consola Científica de Precisión & Motor Simbólico",
-        "subtitle": "Sistema avanzado con gráficos 2D, conversor de unidades, historial, LaTeX, GeoGebra e IA.",
+        "subtitle": "Sistema avanzado con gráficos 2D, conversor de unidades, historial, LaTeX, GeoGebra 2D/3D e IA.",
         "settings_header": "⚙️ Ajustes de la App",
         "lang_label": "Idioma / Hizkuntza",
         "save_btn": "Guardar ajustes",
@@ -65,7 +65,8 @@ t = {
             "Calculadora Científica Interactiva",
             "Graficador 2D de Funciones",
             "Conversor de Unidades Científicas",
-            "Geometría Avanzada (GeoGebra)",
+            "Geometria Avanzada 2D",
+            "Geometria Avanzada 3D",
         ],
         "ai_header": "🤖 Asistente Matemático IA",
         "ai_desc": "Pregúntale sobre lo que hay en pantalla (se borra al salir):",
@@ -75,7 +76,7 @@ t = {
         "calc_desc": "Usa el teclado virtual. Las expresiones se renderizan automáticamente con notación matemática formal.",
         "keyboard": "⌨️ Teclado Científico Unificado:",
         "clear": "🗑️ Borrar",
-        "trig": "Trigonometría e Hiperbólicas:",
+        "trig": "Funciones Trigonométricas:",
         "powers": "Potencias, Raíces, Logaritmos y Constantes:",
         "input_label": "Expresión Científica:",
         "calc_btn": "🚀 Calcular Expresión y Mostrar Símbolos",
@@ -92,8 +93,8 @@ t = {
         "conv_from": "De:",
         "conv_to": "A:",
         "conv_btn": "Convertir Unidades",
-        "geo_sub": "📐 Entorno de Geometría Avanzada (GeoGebra en Pantalla Completa)",
-        "geo_desc": "Utiliza la herramienta interactiva de GeoGebra expandida al máximo para ocupar toda la pantalla.",
+        "geo2d_sub": "📐 Geometría Avanzada 2D (GeoGebra)",
+        "geo3d_sub": "📐 Geometría Avanzada 3D (GeoGebra)",
         "footer": "Consola científica avanzada impulsada por Python, Streamlit, Plotly, SymPy y Google Gemini.",
     },
     "Euskera": {
@@ -107,7 +108,8 @@ t = {
             "Kalkulagailu Zientifiko Interaktiboa",
             "2D Funtzioen Grafikatzailea",
             "Unitate Zientifikoen Bihurtzailea",
-            "Geometria Aurreratua (GeoGebra)",
+            "Geometria Aurreratua 2D",
+            "Geometria Aurreratua 3D",
         ],
         "ai_header": "🤖 IA Laguntzaile Matematikoa",
         "ai_desc": "Galdetu pantailan daukazunari buruz (atera ez gero ezabatzen da):",
@@ -117,7 +119,7 @@ t = {
         "calc_desc": "Erabili teklatu birtuala. Adierazpenak modu formalean marrazten dira pantailan.",
         "keyboard": "⌨️ Teklatu Zientifiko Bateratua:",
         "clear": "🗑️ Garbitu",
-        "trig": "Trigonometria eta Hiperbolikoak:",
+        "trig": "Funtzio Trigonometrikoak:",
         "powers": "Berreketak, Erraiak, Logaritmoak eta Konstanteak:",
         "input_label": "Adierazpen Zientifikoa:",
         "calc_btn": "🚀 Kalkulatu Adierazpena eta Erakutsi Ikurrak",
@@ -134,17 +136,14 @@ t = {
         "conv_from": "Hemendik:",
         "conv_to": " Hona:",
         "conv_btn": "Bihurtu Unitateak",
-        "geo_sub": "📐 Geometria Aurreratuaren Ingurunea (GeoGebra Pantaila Osoan)",
-        "geo_desc": "Erabili GeoGebraten tresna interaktiboa pantaila osoa betetzeko zabalduta.",
+        "geo2d_sub": "📐 Geometria Aurreratua 2D (GeoGebra)",
+        "geo3d_sub": "📐 Geometria Aurreratua 3D (GeoGebra)",
         "footer": "Kontsola zientifiko aurreratua Python, Streamlit, Plotly, SymPy eta Google Geminik bultzatuta.",
     },
 }
 
 lang_texts = t[st.session_state.lang]
 
-# ==========================================
-# BARRA LATERAL
-# ==========================================
 with st.sidebar:
     with st.expander(lang_texts["settings_header"], expanded=False):
         selected_lang = st.selectbox(
@@ -157,9 +156,7 @@ with st.sidebar:
             st.rerun()
 
     st.markdown("---")
-
     modo = st.selectbox(lang_texts["mode_label"], lang_texts["modes"])
-
     st.markdown("---")
 
     st.subheader(lang_texts["ai_header"])
@@ -185,36 +182,21 @@ with st.sidebar:
                     st.error("Falta configurar GEMINI_API_KEY en st.secrets.")
                 else:
                     client = genai.Client(api_key=api_key)
-                    contexto_pantalla = st.session_state.get(
-                        "last_result", "Sin datos"
-                    )
-
+                    contexto_pantalla = st.session_state.get("last_result", "Sin datos")
                     system_prompt = (
                         f"Eres un profesor experto en matemáticas. Responde SIEMPRE en el idioma: {st.session_state.lang}. "
-                        "Analiza el contexto actual de la pantalla del usuario y responde de forma concisa y directa "
-                        "a su duda sobre si hay errores, conceptos o el significado matemático de lo que está viendo.\n\n"
-                        f"Contexto de la pantalla actual: {contexto_pantalla}\n"
-                        f"Pregunta del usuario: {user_query}"
+                        "Analiza el contexto actual y responde de forma concisa y directa a su duda.\n\n"
+                        f"Contexto actual: {contexto_pantalla}\nPregunta: {user_query}"
                     )
-
                     response = client.models.generate_content(
                         model="gemini-3.6-flash", contents=system_prompt
                     )
-                    respuesta_ia = response.text
-
-                    st.session_state.ai_messages.append(
-                        {"role": "user", "content": user_query}
-                    )
-                    st.session_state.ai_messages.append(
-                        {"role": "assistant", "content": respuesta_ia}
-                    )
+                    st.session_state.ai_messages.append({"role": "user", "content": user_query})
+                    st.session_state.ai_messages.append({"role": "assistant", "content": response.text})
                     st.rerun()
             except Exception as e:
                 st.error(f"Error: {e}")
 
-# ==========================================
-# CONTENIDO PRINCIPAL DE LA PÁGINA
-# ==========================================
 st.title(lang_texts["title"])
 st.markdown(lang_texts["subtitle"])
 st.markdown("---")
@@ -249,45 +231,33 @@ if modo_actual in ["Calculadora Científica Interactiva", "Kalkulagailu Zientifi
     if c5.button("5"): add_sci("5")
     if c6.button("6"): add_sci("6")
 
-    c7, c8, c9, c10, c11, c12 = st.columns(6)
+    c7, c8, c9, c10, c11 = st.columns(5)
     if c7.button("1"): add_sci("1")
     if c8.button("2"): add_sci("2")
     if c9.button("3"): add_sci("3")
     if c10.button("0"): add_sci("0")
     if c11.button("."): add_sci(".")
-    if c12.button("exp("): add_sci("exp(")
 
     st.markdown(lang_texts["trig"])
-    t1, t2, t3, t4, t5, t6, t7, t8, t9 = st.columns(9)
-    if t1.button("sen("): add_sci("sin(")
-    if t2.button("cos("): add_sci("cos(")
-    if t3.button("tan("): add_sci("tan(")
-    if t4.button("senh("): add_sci("sinh(")
-    if t5.button("cosh("): add_sci("cosh(")
-    if t6.button("tanh("): add_sci("tanh(")
-    if t7.button("arcoseno("): add_sci("asin(")
-    if t8.button("arcocoseno("): add_sci("acos(")
-    if t9.button("arcotangente("): add_sci("atan(")
+    t1, t2, t3, t4, t5, t6 = st.columns(6)
+    if t1.button("sin(x)"): add_sci("sin(")
+    if t2.button("cos(x)"): add_sci("cos(")
+    if t3.button("tan(x)"): add_sci("tan(")
+    if t4.button("csc(x)"): add_sci("csc(")
+    if t5.button("sec(x)"): add_sci("sec(")
+    if t6.button("cot(x)"): add_sci("cot(")
 
     st.markdown(lang_texts["powers"])
-    p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12 = st.columns(12)
-    if p1.button("sqrt("): add_sci("sqrt(")
-    if p2.button("cbrt("): add_sci("cbrt(")
+    p1, p2, p3, p4, p5, p6, p7, p8, p9 = st.columns(9)
+    if p1.button("√x"): add_sci("sqrt(")
+    if p2.button("∛x"): add_sci("cbrt(")
     if p3.button("**"): add_sci("**")
-    if p4.button("/"): add_sci("/")
-    if p5.button("!"): add_sci("factorial(")
-    if p6.button("%"): add_sci("%")
-    if p7.button("lg("): add_sci("log10(")
-    if p8.button("ln("): add_sci("ln(")
-    if p9.button("log("): add_sci("log(")
-    if p10.button("π"): add_sci("pi")
-    if p11.button("ℯ"): add_sci("e")
-    if p12.button("x"): add_sci("x")
-
-    v1, v2, v3 = st.columns(3)
-    if v1.button("a"): add_sci("a")
-    if v2.button("b"): add_sci("b")
-    if v3.button("c"): add_sci("c")
+    if p4.button("!"): add_sci("factorial(")
+    if p5.button("%"): add_sci("%")
+    if p6.button("lg("): add_sci("log10(")
+    if p7.button("ln("): add_sci("ln(")
+    if p8.button("π"): add_sci("pi")
+    if p9.button("ℯ"): add_sci("e")
 
     sci_input = st.text_input(lang_texts["input_label"], key="sci_val")
 
@@ -298,14 +268,14 @@ if modo_actual in ["Calculadora Científica Interactiva", "Kalkulagailu Zientifi
             try:
                 safe_dict = {
                     "sin": mpmath.sin, "cos": mpmath.cos, "tan": mpmath.tan,
-                    "sinh": mpmath.sinh, "cosh": mpmath.cosh, "tanh": mpmath.tanh,
-                    "asin": mpmath.asin, "acos": mpmath.acos, "atan": mpmath.atan,
-                    "sqrt": mpmath.sqrt, "exp": mpmath.exp,
+                    "csc": lambda val: 1 / mpmath.sin(val),
+                    "sec": lambda val: 1 / mpmath.cos(val),
+                    "cot": lambda val: 1 / mpmath.tan(val),
+                    "sqrt": mpmath.sqrt,
                     "cbrt": lambda val: mpmath.power(val, 1 / 3),
                     "factorial": mpmath.factorial, "log10": mpmath.log10,
                     "ln": mpmath.ln, "log": mpmath.log, "pi": mpmath.pi,
-                    "e": mpmath.e, "x": 1, "a": 1, "b": 1, "c": 1,
-                    "__builtins__": None,
+                    "e": mpmath.e, "__builtins__": None,
                 }
                 resultado_eval = eval(sci_input, safe_dict, {})
                 res_sci = mpmath.nstr(resultado_eval, 30)
@@ -314,7 +284,6 @@ if modo_actual in ["Calculadora Científica Interactiva", "Kalkulagailu Zientifi
                 st.success(lang_texts["success_calc"])
                 st.code(res_sci, language="text")
 
-                # Guardar en historial (máximo 5 elementos)
                 st.session_state.history.insert(0, {"expr": sci_input, "res": res_sci})
                 if len(st.session_state.history) > 5:
                     st.session_state.history.pop()
@@ -332,7 +301,6 @@ if modo_actual in ["Calculadora Científica Interactiva", "Kalkulagailu Zientifi
                 st.session_state.last_result = f"Expresión: {sci_input} | Error: {e}"
                 st.error(f"Error: {e}")
 
-    # Mostrar Historial Reciente
     if st.session_state.history:
         st.markdown("---")
         st.subheader(lang_texts["history_sub"])
@@ -351,11 +319,11 @@ elif modo_actual in ["Graficador 2D de Funciones", "2D Funtzioen Grafikatzailea"
     if st.button(lang_texts["plot_btn"], type="primary"):
         try:
             x_vals = np.linspace(xmin, xmax, 400)
-            # Evaluar usando numpy de forma segura
             safe_np_dict = {
                 "sin": np.sin, "cos": np.cos, "tan": np.tan,
-                "sinh": np.sinh, "cosh": np.cosh, "tanh": np.tanh,
-                "arcsin": np.arcsin, "arccos": np.arccos, "arctan": np.arctan,
+                "csc": lambda val: 1 / np.sin(val),
+                "sec": lambda val: 1 / np.cos(val),
+                "cot": lambda val: 1 / np.tan(val),
                 "sqrt": np.sqrt, "exp": np.exp, "log": np.log, "log10": np.log10,
                 "pi": np.pi, "e": np.e, "x": x_vals, "__builtins__": None
             }
@@ -364,11 +332,9 @@ elif modo_actual in ["Graficador 2D de Funciones", "2D Funtzioen Grafikatzailea"
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', name=f"f(x) = {func_input}", line=dict(color='#00ffcc', width=2)))
             fig.update_layout(
-                paper_bgcolor='#0e1117',
-                plot_bgcolor='#161b22',
+                paper_bgcolor='#0e1117', plot_bgcolor='#161b22',
                 font=dict(color='#c9d1d9'),
-                xaxis=dict(gridcolor='#30363d'),
-                yaxis=dict(gridcolor='#30363d'),
+                xaxis=dict(gridcolor='#30363d'), yaxis=dict(gridcolor='#30363d'),
                 margin=dict(l=20, r=20, t=20, b=20)
             )
             st.plotly_chart(fig, use_container_width=True)
@@ -378,7 +344,6 @@ elif modo_actual in ["Graficador 2D de Funciones", "2D Funtzioen Grafikatzailea"
 
 elif modo_actual in ["Conversor de Unidades Científicas", "Unitate Zientifikoen Bihurtzailea"]:
     st.subheader(lang_texts["conv_sub"])
-
     tipo_magnitud = st.selectbox(lang_texts["conv_type"], ["Ángulo", "Longitud", "Temperatura"])
     
     if tipo_magnitud == "Ángulo":
@@ -392,10 +357,8 @@ elif modo_actual in ["Conversor de Unidades Científicas", "Unitate Zientifikoen
     
     if tipo_magnitud != "Temperatura":
         from_u = st.selectbox(lang_texts["conv_from"], list(unidades.keys()))
-        to_u = st.selectbox(lang_texts["conv_to"], list(unidades.keys()), index=1 if len(unidades) > 1 else 0)
-        
+        to_u = st.selectbox(lang_texts["conv_to"], list(unidades.keys()), index=1)
         if st.button(lang_texts["conv_btn"], type="primary"):
-            # Convertir a unidad base y luego a la unidad de destino
             en_base = val_ingresado * unidades[from_u]
             resultado_conv = en_base / unidades[to_u]
             st.success(f"Resultado: {val_ingresado} {from_u} = {resultado_conv} {to_u}")
@@ -403,15 +366,11 @@ elif modo_actual in ["Conversor de Unidades Científicas", "Unitate Zientifikoen
     else:
         from_u = st.selectbox(lang_texts["conv_from"], list(unidades.keys()))
         to_u = st.selectbox(lang_texts["conv_to"], list(unidades.keys()), index=2)
-        
         if st.button(lang_texts["conv_btn"], type="primary"):
-            # Lógica específica para temperatura
-            # Convertir a Celsius primero
             if from_u == "Celsius": c = val_ingresado
             elif from_u == "Fahrenheit": c = (val_ingresado - 32) * 5/9
             else: c = val_ingresado - 273.15
             
-            # Convertir de Celsius a destino
             if to_u == "Celsius": res_t = c
             elif to_u == "Fahrenheit": res_t = c * 9/5 + 32
             else: res_t = c + 273.15
@@ -419,18 +378,22 @@ elif modo_actual in ["Conversor de Unidades Científicas", "Unitate Zientifikoen
             st.success(f"Resultado: {val_ingresado} {from_u} = {res_t} {to_u}")
             st.session_state.last_result = f"Conversión: {val_ingresado} {from_u} = {res_t} {to_u}"
 
-else:
-    st.subheader(lang_texts["geo_sub"])
-    st.markdown(lang_texts["geo_desc"])
-    st.session_state.last_result = (
-        "El usuario interactúa con GeoGebra."
-        if st.session_state.lang == "Español"
-        else "Erabiltzailea GeoGebraten ari da."
-    )
-
+elif modo_actual in ["Geometria Avanzada 2D", "Geometria Aurreratua 2D"]:
+    st.subheader(lang_texts["geo2d_sub"])
+    st.session_state.last_result = "GeoGebra 2D activo."
     geogebra_html = """
     <div style="width: 100%; height: 85vh; background-color: #161b22; border-radius: 10px; overflow: hidden; border: 1px solid #30363d;">
-        <iframe src="https://www.geogebra.org/classic?embed" width="100%" height="100%" style="border:none;" allowfullscreen></iframe>
+        <iframe src="https://www.geogebra.org/geometry?embed" width="100%" height="100%" style="border:none;" allowfullscreen></iframe>
+    </div>
+    """
+    st.components.v1.html(geogebra_html, height=750, scrolling=False)
+
+else:
+    st.subheader(lang_texts["geo3d_sub"])
+    st.session_state.last_result = "GeoGebra 3D activo."
+    geogebra_html = """
+    <div style="width: 100%; height: 85vh; background-color: #161b22; border-radius: 10px; overflow: hidden; border: 1px solid #30363d;">
+        <iframe src="https://www.geogebra.org/3d?embed" width="100%" height="100%" style="border:none;" allowfullscreen></iframe>
     </div>
     """
     st.components.v1.html(geogebra_html, height=750, scrolling=False)
