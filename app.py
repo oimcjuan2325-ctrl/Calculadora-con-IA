@@ -62,6 +62,9 @@ t = {
         "settings_header": "⚙️ Ajustes de la App",
         "lang_label": "Idioma / Hizkuntza",
         "save_btn": "Guardar ajustes",
+        "secure_platform_header": "🔒 Plataforma Segura e Inteligente",
+        "secure_platform_desc": "Accede al sistema cifrado avanzado:",
+        "secure_platform_btn": "🔗 Entrar en Plataforma Segura",
         "mode_label": "Modo de Operación:",
         "modes": [
             "Calculadora Científica Interactiva",
@@ -122,6 +125,9 @@ t = {
         "settings_header": "⚙️ Aplikazioaren Ezarpenak",
         "lang_label": "Idioma / Hizkuntza",
         "save_btn": "Gorde ezarpenak",
+        "secure_platform_header": "🔒 Plataforma Seguru eta Adimenduna",
+        "secure_platform_desc": "Sartu zifratze aurreratuko sistemara:",
+        "secure_platform_btn": "🔗 Sartu Plataforma Segurura",
         "mode_label": "Eragiketa Modua:",
         "modes": [
             "Kalkulagailu Zientifiko Interaktiboa",
@@ -190,6 +196,11 @@ with st.sidebar:
         if st.button(lang_texts["save_btn"]):
             st.session_state.lang = selected_lang
             st.rerun()
+
+        st.markdown("---")
+        st.markdown(f"**{lang_texts['secure_platform_header']}**")
+        st.markdown(lang_texts["secure_platform_desc"])
+        st.markdown(f"[{lang_texts['secure_platform_btn']}](https://oimcjuan2325-ctrl-red-de-criptografia-avanzada-app-cno4oj.streamlit.app)")
 
     st.markdown("---")
     modo = st.selectbox(lang_texts["mode_label"], lang_texts["modes"])
