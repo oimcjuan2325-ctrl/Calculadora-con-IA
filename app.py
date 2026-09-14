@@ -101,8 +101,8 @@ t = {
         "conv_from": "De:",
         "conv_to": "A:",
         "conv_btn": "Convertir Unidades",
-        "geo2d_sub": "📐 Geometría Avanzada 2D (GeoGebra)",
-        "geo3d_sub": "📐 Geometría Avanzada 3D (GeoGebra)",
+        "geo2d_sub": "📐 Geometria Avanzada 2D (GeoGebra)",
+        "geo3d_sub": "📐 Geometria Avanzada 3D (GeoGebra)",
         "math_courses_sub": "📚 Cursos y Recursos de Matemáticas",
         "math_courses_desc": "Selecciona un recurso o curso recomendado para aprender y perfeccionar tus habilidades:",
         "calc_guide_title": "📖 Guía de la Calculadora",
@@ -211,7 +211,7 @@ with st.sidebar:
 
     for msg in st.session_state.ai_messages[-2:]:
         if msg["role"] == "user":
-            st.markdown(f"**Tú / Zu:** {msg['content']}")
+            st.markdown(f"**{ 'Tú' if st.session_state.lang == 'Español' else 'Zu' }:** {msg['content']}")
         else:
             st.markdown(f"**IA:** {msg['content']}")
 
@@ -226,14 +226,18 @@ with st.sidebar:
             try:
                 api_key = st.secrets.get("GEMINI_API_KEY", "")
                 if not api_key:
-                    st.error("Falta configurar GEMINI_API_KEY en st.secrets.")
+                    st.error("Falta configurar GEMINI_API_KEY en st.secrets." if st.session_state.lang == "Español" else "GEMINI_API_KEY ez da konfiguratu st.secrets-en.")
                 else:
                     client = genai.Client(api_key=api_key)
-                    contexto_pantalla = st.session_state.get("last_result", "Sin datos")
+                    contexto_pantalla = st.session_state.get("last_result", "Sin datos" if st.session_state.lang == "Español" else "Daturik ez")
+                    
+                    # Forzar de forma estricta que la IA responda completamente en el idioma seleccionado (Euskera o Español)
+                    target_language_name = "Euskara (Basque)" if st.session_state.lang == "Euskera" else "Español (Spanish)"
                     system_prompt = (
-                        f"Eres un profesor experto en matemáticas. Responde SIEMPRE en el idioma: {st.session_state.lang}. "
-                        "Analiza el contexto actual y responde de forma concisa y directa a su duda.\n\n"
-                        f"Contexto actual: {contexto_pantalla}\nPregunta: {user_query}"
+                        f"Eres un profesor experto en matemáticas. Es OBLIGATORIO que respondas ABSOLUTAMENTE TODO el mensaje única y exclusivamente en el siguiente idioma: {target_language_name}. "
+                        "No utilices ningún otro idioma bajo ningún concepto. "
+                        "Analiza el contexto actual y responde de forma concisa, educada y directa a la duda del usuario.\n\n"
+                        f"Contexto actual: {contexto_pantalla}\nPregunta del usuario: {user_query}"
                     )
                     response = client.models.generate_content(
                         model="gemini-3.6-flash", contents=system_prompt
@@ -336,7 +340,7 @@ if modo_actual in ["Calculadora Científica Interactiva", "Kalkulagailu Zientifi
                 res_sci = mpmath.nstr(resultado_eval, 30)
 
                 st.session_state.last_numeric_res = float(mpmath.mpf(resultado_eval))
-                st.session_state.last_result = f"Expresión: {sci_input} | Resultado: {res_sci}"
+                st.session_state.last_result = f"Expresión: {sci_input} | Resultado: {res_sci}" if st.session_state.lang == "Español" else f"Adierazpena: {sci_input} | Emaitza: {res_sci}"
                 st.success(lang_texts["success_calc"])
                 st.code(res_sci, language="text")
 
@@ -354,16 +358,17 @@ if modo_actual in ["Calculadora Científica Interactiva", "Kalkulagailu Zientifi
                 st.latex(sp.latex(expr_simbolica))
 
             except Exception as e:
-                st.session_state.last_result = f"Expresión: {sci_input} | Error: {e}"
+                st.session_state.last_result = f"Error: {e}"
                 st.error(f"Error: {e}")
 
     elif simplify_pressed:
         if st.session_state.last_numeric_res is not None:
             val_simplificado = round(st.session_state.last_numeric_res, num_decimals)
-            st.success(f"Resultado simplificado ({num_decimals} decimales):")
+            success_msg = "Resultado simplificado:" if st.session_state.lang == "Español" else "Emaitza sinplifikatua:"
+            st.success(f"{success_msg} ({num_decimals} decimales / hamartar):")
             st.code(str(val_simplificado), language="text")
         else:
-            st.warning("Primero debes realizar un cálculo válido para poder simplificarlo.")
+            st.warning("Primero debes realizar un cálculo válido para poder simplificarlo." if st.session_state.lang == "Español" else "Lehenik eta behin baliozko kalkulu bat egin behar duzu sinplifikatu ahal izateko.")
 
     if st.session_state.history:
         st.markdown("---")
@@ -377,8 +382,8 @@ elif modo_actual in ["Graficador 2D de Funciones", "2D Funtzioen Grafikatzailea"
 
     func_input = st.text_input("f(x) =", value="x**2 - 2*x - 3")
     col1, col2 = st.columns(2)
-    xmin = col1.number_input("X mínimo", value=-10.0)
-    xmax = col2.number_input("X máximo", value=10.0)
+    xmin = col1.number_input("X mínimo / minimoa", value=-10.0)
+    xmax = col2.number_input("X máximo / maximoa", value=10.0)
 
     if st.button(lang_texts["plot_btn"], type="primary"):
         try:
@@ -402,30 +407,30 @@ elif modo_actual in ["Graficador 2D de Funciones", "2D Funtzioen Grafikatzailea"
                 margin=dict(l=20, r=20, t=20, b=20)
             )
             st.plotly_chart(fig, use_container_width=True)
-            st.session_state.last_result = f"Gráfica generada para f(x) = {func_input}"
+            st.session_state.last_result = f"Gráfica generada para f(x) = {func_input}" if st.session_state.lang == "Español" else f"f(x) = {func_input} funtziorako sortutako grafikoa"
         except Exception as e:
-            st.error(f"Error al graficar: {e}")
+            st.error(f"Error: {e}")
 
 elif modo_actual in ["Conversor de Unidades Científicas", "Unitate Zientifikoen Bihurtzailea"]:
     st.subheader(lang_texts["conv_sub"])
-    tipo_magnitud = st.selectbox(lang_texts["conv_type"], ["Ángulo", "Longitud", "Temperatura"])
+    tipo_magnitud = st.selectbox(lang_texts["conv_type"], ["Ángulo / Angelua", "Longitud / Luzera", "Temperatura / Tenperatura"])
     
-    if tipo_magnitud == "Ángulo":
-        unidades = {"Radianes": 1.0, "Grados": np.pi / 180, "Gradiantes": np.pi / 200}
-    elif tipo_magnitud == "Longitud":
-        unidades = {"Metros": 1.0, "Kilómetros": 1000.0, "Millas": 1609.34, "Pies": 0.3048}
+    if "Ángulo" in tipo_magnitud:
+        unidades = {"Radianes / Radianak": 1.0, "Grados / Graduak": np.pi / 180, "Gradiantes / Gradienteak": np.pi / 200}
+    elif "Longitud" in tipo_magnitud:
+        unidades = {"Metros / Metroak": 1.0, "Kilómetros / Kilometroak": 1000.0, "Millas / Miliak": 1609.34, "Pies / Oinak": 0.3048}
     else:
         unidades = {"Celsius": "C", "Fahrenheit": "F", "Kelvin": "K"}
 
     val_ingresado = st.number_input(lang_texts["conv_val"], value=1.0)
     
-    if tipo_magnitud != "Temperatura":
+    if "Temperatura" not in tipo_magnitud:
         from_u = st.selectbox(lang_texts["conv_from"], list(unidades.keys()))
         to_u = st.selectbox(lang_texts["conv_to"], list(unidades.keys()), index=1)
         if st.button(lang_texts["conv_btn"], type="primary"):
             en_base = val_ingresado * unidades[from_u]
             resultado_conv = en_base / unidades[to_u]
-            st.success(f"Resultado: {val_ingresado} {from_u} = {resultado_conv} {to_u}")
+            st.success(f"Resultado / Emaitza: {val_ingresado} {from_u} = {resultado_conv} {to_u}")
             st.session_state.last_result = f"Conversión: {val_ingresado} {from_u} = {resultado_conv} {to_u}"
     else:
         from_u = st.selectbox(lang_texts["conv_from"], list(unidades.keys()))
@@ -439,12 +444,12 @@ elif modo_actual in ["Conversor de Unidades Científicas", "Unitate Zientifikoen
             elif to_u == "Fahrenheit": res_t = c * 9/5 + 32
             else: res_t = c + 273.15
             
-            st.success(f"Resultado: {val_ingresado} {from_u} = {res_t} {to_u}")
+            st.success(f"Resultado / Emaitza: {val_ingresado} {from_u} = {res_t} {to_u}")
             st.session_state.last_result = f"Conversión: {val_ingresado} {from_u} = {res_t} {to_u}"
 
 elif modo_actual in ["Geometria Avanzada 2D", "Geometria Aurreratua 2D"]:
     st.subheader(lang_texts["geo2d_sub"])
-    st.session_state.last_result = "GeoGebra 2D activo."
+    st.session_state.last_result = "GeoGebra 2D activo." if st.session_state.lang == "Español" else "GeoGebra 2D aktibo."
     geogebra_html = """
     <div style="width: 100%; height: 85vh; background-color: #161b22; border-radius: 10px; overflow: hidden; border: 1px solid #30363d;">
         <iframe src="https://www.geogebra.org/geometry?embed" width="100%" height="100%" style="border:none;" allowfullscreen></iframe>
@@ -454,7 +459,7 @@ elif modo_actual in ["Geometria Avanzada 2D", "Geometria Aurreratua 2D"]:
 
 elif modo_actual in ["Geometria Avanzada 3D", "Geometria Aurreratua 3D"]:
     st.subheader(lang_texts["geo3d_sub"])
-    st.session_state.last_result = "GeoGebra 3D activo."
+    st.session_state.last_result = "GeoGebra 3D activo." if st.session_state.lang == "Español" else "GeoGebra 3D aktibo."
     geogebra_html = """
     <div style="width: 100%; height: 85vh; background-color: #161b22; border-radius: 10px; overflow: hidden; border: 1px solid #30363d;">
         <iframe src="https://www.geogebra.org/3d?embed" width="100%" height="100%" style="border:none;" allowfullscreen></iframe>
