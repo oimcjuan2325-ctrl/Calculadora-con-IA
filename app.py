@@ -102,6 +102,18 @@ t = {
         "geo3d_sub": "📐 Geometría Avanzada 3D (GeoGebra)",
         "math_courses_sub": "📚 Cursos y Recursos de Matemáticas",
         "math_courses_desc": "Selecciona un recurso o curso recomendado para aprender y perfeccionar tus habilidades:",
+        "calc_guide_title": "📖 Guía de la Calculadora",
+        "calc_guide_desc": "Aprende a utilizar todas las funciones, el teclado virtual y las herramientas avanzadas de esta consola científica.",
+        "calc_guide_link": "🔗 Métete aquí para aprender sobre cómo utilizar la calculadora científica",
+        "trig_title": "📐 Trigonometría Básica",
+        "trig_desc": "Domina las razones trigonométricas, el círculo unitario, senos, cosenos, tangentes y conversiones de ángulos.",
+        "trig_link": "🔗 Métete aquí para aprender sobre trigonometría básica",
+        "arith_title": "➕ Aritmetika eta Oinarriak",
+        "arith_desc": "Refuerza las bases matemáticas esenciales: operaciones con fracciones, potencias, raíces y leyes de los signos.",
+        "arith_link": "🔗 Métete aquí para aprender matemáticas (aritmética)",
+        "algebra_title": "📈 Álgebra y Funciones",
+        "algebra_desc": "Comprende el manejo de expresiones simbólicas, resolución de ecuaciones y representación gráfica de funciones.",
+        "algebra_link": "🔗 Métete aquí para aprender sobre álgebra y funciones",
         "footer": "Consola científica avanzada impulsada por Python, Streamlit, Plotly, SymPy y Google Gemini.",
     },
     "Euskera": {
@@ -150,6 +162,18 @@ t = {
         "geo3d_sub": "📐 Geometria Aurreratua 3D (GeoGebra)",
         "math_courses_sub": "📚 Matematika Ikastaroak eta Baliabideak",
         "math_courses_desc": "Hautatu gomendatutako baliabide edo ikastaro bat ikasteko eta trebetasunak hobetzeko:",
+        "calc_guide_title": "📖 Kalkulagailuaren Gida",
+        "calc_guide_desc": "Ikasi kontsola zientifiko honen funtzio guztiak, teklatu birtuala eta tresna aurreratuak erabiltzen.",
+        "calc_guide_link": "🔗 Sartu hemen kalkulagailu zientifikoa nola erabili ikasteko",
+        "trig_title": "📐 Oinarrizko Trigonometria",
+        "trig_desc": "Menperatu arrazoi trigonometrikoak, zirkulu unitarioa, sinuak, kosinuak, tangenteak eta angeluen bihurketak.",
+        "trig_link": "🔗 Sartu hemen oinarrizko trigonometriari buruz ikasteko",
+        "arith_title": "➕ Aritmetika eta Oinarriak",
+        "arith_desc": "Indartu funtsezko oinarri matematikoak: zatikien eragiketak, berreketak, erroak eta zeinuen legeak.",
+        "arith_link": "🔗 Sartu hemen matematika (aritmetika) ikasteko",
+        "algebra_title": "📈 Aljebra eta Funtzioak",
+        "algebra_desc": "Ulertu adierazpen sinbolikoen erabilera, ekuazioen ebazpena eta funtzioen irudikapen grafikoa.",
+        "algebra_link": "🔗 Sartu hemen aljebrari eta funtzioei buruz ikasteko",
         "footer": "Kontsola zientifiko aurreratua Python, Streamlit, Plotly, SymPy eta Google Geminik bultzatuta.",
     },
 }
@@ -430,28 +454,28 @@ elif modo_actual in ["Geometria Avanzada 3D", "Geometria Aurreratua 3D"]:
 else:
     st.subheader(lang_texts["math_courses_sub"])
     st.markdown(lang_texts["math_courses_desc"])
-    st.session_state.last_result = "Sección de Cursos de Matemáticas abierta."
+    st.session_state.last_result = "Sección de Cursos de Matemáticas abierta." if st.session_state.lang == "Español" else "Matematika Ikastaroen atala irekita."
 
     st.markdown("---")
     
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("### 📖 Guía de la Calculadora")
-        st.markdown("Aprende a utilizar todas las funciones, el teclado virtual y las herramientas avanzadas de esta consola científica.")
-        st.markdown("[🔗 Métete aquí para aprender sobre cómo utilizar la calculadora científica](https://example.com/curso-calculadora)")
+        st.markdown(f"### {lang_texts['calc_guide_title']}")
+        st.markdown(lang_texts['calc_guide_desc'])
+        st.markdown(f"[{lang_texts['calc_guide_link']}](https://example.com/curso-calculadora)")
 
-        st.markdown("### 📐 Trigonometría Básica")
-        st.markdown("Domina las razones trigonométricas, el círculo unitario, senos, cosenos, tangentes y conversiones de ángulos.")
-        st.markdown("[🔗 Métete aquí para aprender sobre trigonometría básica](https://example.com/curso-trigonometria)")
+        st.markdown(f"### {lang_texts['trig_title']}")
+        st.markdown(lang_texts['trig_desc'])
+        st.markdown(f"[{lang_texts['trig_link']}](https://example.com/curso-trigonometria)")
 
     with col2:
-        st.markdown("### ➕ Aritmética y Fundamentos")
-        st.markdown("Refuerza las bases matemáticas esenciales: operaciones con fracciones, potencias, raíces y leyes de los signos.")
-        st.markdown("[🔗 Métete aquí para aprender matemáticas (aritmética)](https://example.com/curso-aritmetica)")
+        st.markdown(f"### {lang_texts['arith_title']}")
+        st.markdown(lang_texts['arith_desc'])
+        st.markdown(f"[{lang_texts['arith_link']}](https://example.com/curso-aritmetica)")
 
-        st.markdown("### 📈 Álgebra y Funciones")
-        st.markdown("Comprende el manejo de expresiones simbólicas, resolución de ecuaciones y representación gráfica de funciones.")
-        st.markdown("[🔗 Métete aquí para aprender sobre álgebra y funciones](https://example.com/curso-algebra)")
+        st.markdown(f"### {lang_texts['algebra_title']}")
+        st.markdown(lang_texts['algebra_desc'])
+        st.markdown(f"[{lang_texts['algebra_link']}](https://example.com/curso-algebra)")
 
 st.markdown("---")
 st.caption(lang_texts["footer"])
